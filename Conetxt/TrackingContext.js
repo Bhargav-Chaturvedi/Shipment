@@ -170,7 +170,8 @@ export const TrackingProvider = ({ children }) => {
       if (address) {
         const web3Modal = new Web3Modal();
         const connection = await web3Modal.connect();
-        const provider = new ethers.providers.Web3Provider(connection);
+        // const provider = new ethers.providers.Web3Provider(connection);
+        const provider = new ethers.providers.JsonRpcProvider("https://polygon-amoy.g.alchemy.com/v2/InluP3r0JxfdDuGpDXDAvlr1lHYYqWmy");
         const contract = fetchContract(provider);
 
         const shipments = await contract.getAllTransactions();
@@ -198,8 +199,8 @@ export const TrackingProvider = ({ children }) => {
       if (address) {
         const web3Modal = new Web3Modal();
         const connection = await web3Modal.connect();
-        const provider = new ethers.providers.Web3Provider(connection);
-
+        // const provider = new ethers.providers.Web3Provider(connection);
+        const provider = new ethers.providers.JsonRpcProvider("https://polygon-amoy.g.alchemy.com/v2/InluP3r0JxfdDuGpDXDAvlr1lHYYqWmy");
         const contract = fetchContract(provider);
         const shipmentsCount = await contract.getShipmentsCount(accounts[0]);
         return shipmentsCount.toNumber();
@@ -245,8 +246,8 @@ export const TrackingProvider = ({ children }) => {
       if (address) {
         const web3Modal = new Web3Modal();
         const connection = await web3Modal.connect();
-        const provider = new ethers.providers.Web3Provider(connection);
-
+        // const provider = new ethers.providers.Web3Provider(connection);
+        const provider = new ethers.providers.JsonRpcProvider("https://polygon-amoy.g.alchemy.com/v2/InluP3r0JxfdDuGpDXDAvlr1lHYYqWmy");
         const contract = fetchContract(provider);
         const shipment = await contract.getShipment(address, index * 1);
 
