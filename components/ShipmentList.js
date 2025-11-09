@@ -55,48 +55,46 @@ export default function ShipmentList() {
 
   return (
     <div id="all-shipments" style={{ width: "100%" }}>
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes copySuccess {
+          0% { 
+            background: rgba(0, 242, 254, 0.1);
+            border-color: rgba(0, 242, 254, 0.3);
+            transform: scale(1);
           }
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+          50% { 
+            background: rgba(16, 185, 129, 0.3);
+            border-color: rgba(16, 185, 129, 0.8);
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
           }
-          @keyframes copySuccess {
-            0% { 
-              background: rgba(0, 242, 254, 0.1);
-              border-color: rgba(0, 242, 254, 0.3);
-              transform: scale(1);
-            }
-            50% { 
-              background: rgba(16, 185, 129, 0.3);
-              border-color: rgba(16, 185, 129, 0.8);
-              transform: scale(1.1);
-              box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
-            }
-            100% { 
-              background: rgba(0, 242, 254, 0.1);
-              border-color: rgba(0, 242, 254, 0.3);
-              transform: scale(1);
-            }
+          100% { 
+            background: rgba(0, 242, 254, 0.1);
+            border-color: rgba(0, 242, 254, 0.3);
+            transform: scale(1);
           }
-          .shipment-row {
-            transition: all 0.3s ease;
-          }
-          .shipment-row:hover {
-            background: rgba(0, 242, 254, 0.05) !important;
-            transform: scale(1.01);
-          }
-          .copy-btn-copied {
-            animation: copySuccess 0.4s ease-out;
-            background: rgba(16, 185, 129, 0.3) !important;
-            border-color: rgba(16, 185, 129, 0.8) !important;
-          }
-        `}
-      </style>
+        }
+        .shipment-row {
+          transition: all 0.3s ease;
+        }
+        .shipment-row:hover {
+          background: rgba(0, 242, 254, 0.05) !important;
+          transform: scale(1.01);
+        }
+        .copy-btn-copied {
+          animation: copySuccess 0.4s ease-out;
+          background: rgba(16, 185, 129, 0.3) !important;
+          border-color: rgba(16, 185, 129, 0.8) !important;
+        }
+      `}} />
 
       {/* Header */}
       <div
@@ -251,7 +249,7 @@ export default function ShipmentList() {
                 <th style={thStyle}>Delivery</th>
                 <th style={thStyle}>Distance</th>
                 <th style={thStyle}>Price</th>
-                <th style={thStyle}>Status</th>
+                <th style={{...thStyle, minWidth: "110px"}}>Status</th>
                 <th style={thStyle}>Payment</th>
                 <th style={thStyle}>Actions</th>
               </tr>
@@ -319,7 +317,7 @@ export default function ShipmentList() {
                       {s.price ? Number(s.price).toFixed(4) : "0"} ETH
                     </span>
                   </td>
-                  <td style={tdStyle}>
+                  <td style={{...tdStyle, minWidth: "110px"}}>
                     <span
                       style={{
                         padding: "6px 12px",
@@ -329,6 +327,10 @@ export default function ShipmentList() {
                         background: getStatusBg(s.status),
                         color: getStatusColor(s.status),
                         border: `1px solid ${getStatusColor(s.status)}40`,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {s.status === 0
