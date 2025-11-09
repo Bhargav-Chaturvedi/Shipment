@@ -1,7 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 
 const NEXT_PUBLIC_POLYGON_AMOY_RPC = "https://rpc-amoy.polygon.technology/";
-const NEXT_PUBLIC_PRIVATE_KEY = "1889c56b22178f88d9c215b8236aa8f90b672020e1e932267bdb9e0f0dfe541c";  // Add your private key here
+const NEXT_PUBLIC_PRIVATE_KEY = "1889c56b22178f88d9c215b8236aa8f90b672020e1e932267bdb9e0f0dfe541c";  
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
