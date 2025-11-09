@@ -143,7 +143,7 @@ Connect your **MetaMask** (on Sepolia Testnet) and start using the app.
 
 | Role         | Permissions                                      |
 | ------------ | ------------------------------------------------ |
-| **Sender**   | Create shipment, view shipment, confirm delivery |
+| **Sender**   | Create shipment, view shipment  |
 | **Courier**  | Start shipment, mark delivered                   |
 | **Receiver** | Confirm delivery (triggers payment)              |
 
