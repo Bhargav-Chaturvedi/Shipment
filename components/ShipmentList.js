@@ -13,6 +13,7 @@ export default function ShipmentList() {
   } = useContext(TrackingContext);
 
   const [loading, setLoading] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -22,6 +23,12 @@ export default function ShipmentList() {
     };
     load();
   }, [getAllShipments]);
+
+  const handleCopy = (address, id) => {
+    navigator.clipboard.writeText(address);
+    setCopiedAddress(id);
+    setTimeout(() => setCopiedAddress(null), 2000);
+  };
 
   const formatTime = (timestamp) => {
     if (!timestamp || timestamp === 0) return "-";
@@ -58,12 +65,35 @@ export default function ShipmentList() {
             from { opacity: 0; }
             to { opacity: 1; }
           }
+          @keyframes copySuccess {
+            0% { 
+              background: rgba(0, 242, 254, 0.1);
+              border-color: rgba(0, 242, 254, 0.3);
+              transform: scale(1);
+            }
+            50% { 
+              background: rgba(16, 185, 129, 0.3);
+              border-color: rgba(16, 185, 129, 0.8);
+              transform: scale(1.1);
+              box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+            }
+            100% { 
+              background: rgba(0, 242, 254, 0.1);
+              border-color: rgba(0, 242, 254, 0.3);
+              transform: scale(1);
+            }
+          }
           .shipment-row {
             transition: all 0.3s ease;
           }
           .shipment-row:hover {
             background: rgba(0, 242, 254, 0.05) !important;
             transform: scale(1.01);
+          }
+          .copy-btn-copied {
+            animation: copySuccess 0.4s ease-out;
+            background: rgba(16, 185, 129, 0.3) !important;
+            border-color: rgba(16, 185, 129, 0.8) !important;
           }
         `}
       </style>
@@ -239,10 +269,8 @@ export default function ShipmentList() {
                         {s.sender.slice(0, 6)}...{s.sender.slice(-4)}
                       </span>
                       <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(s.sender);
-                          alert("Sender address copied!");
-                        }}
+                        onClick={() => handleCopy(s.sender, `sender-${i}`)}
+                        className={copiedAddress === `sender-${i}` ? "copy-btn-copied" : ""}
                         style={copyBtn}
                         title="Copy address"
                       >
@@ -256,10 +284,8 @@ export default function ShipmentList() {
                         {s.receiver.slice(0, 6)}...{s.receiver.slice(-4)}
                       </span>
                       <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(s.receiver);
-                          alert("Receiver address copied!");
-                        }}
+                        onClick={() => handleCopy(s.receiver, `receiver-${i}`)}
+                        className={copiedAddress === `receiver-${i}` ? "copy-btn-copied" : ""}
                         style={copyBtn}
                         title="Copy address"
                       >
@@ -273,10 +299,8 @@ export default function ShipmentList() {
                         {s.courier.slice(0, 6)}...{s.courier.slice(-4)}
                       </span>
                       <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(s.courier);
-                          alert("Courier address copied!");
-                        }}
+                        onClick={() => handleCopy(s.courier, `courier-${i}`)}
+                        className={copiedAddress === `courier-${i}` ? "copy-btn-copied" : ""}
                         style={copyBtn}
                         title="Copy address"
                       >

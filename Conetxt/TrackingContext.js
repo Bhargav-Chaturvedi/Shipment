@@ -1,4 +1,3 @@
-// src/Context/TrackingContext.js
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
 import TrackingABI from "./Tracking.json";
@@ -6,23 +5,49 @@ import TrackingABI from "./Tracking.json";
 export const TrackingContext = createContext();
 
 const CONTRACT_ADDRESS = "0xd349ea4Cfc51a9F6f6accC49253eD445e6D80987";
-
-// Read RPC (Sepolia). Replace with your own key if needed.
 const READ_RPC = "https://eth-sepolia.g.alchemy.com/v2/pPfNOZ5-BPehquKNAga5X";
 
+// Simple Toast Component
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 4000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const colors = {
+    success: "bg-green-500",
+    warning: "bg-orange-500",
+    error: "bg-red-500"
+  };
+
+  return (
+    <div className={`fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md animate-slide-in`}>
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm font-medium">{message}</span>
+        <button onClick={onClose} className="text-white hover:text-gray-200 font-bold text-xl leading-none">
+          ×
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export const TrackingProvider = ({ children }) => {
-  const [provider, setProvider] = useState(null); // read provider (JsonRpcProvider or Web3Provider)
-  const [signer, setSigner] = useState(null); // signer for writes
+  const [provider, setProvider] = useState(null);
+  const [signer, setSigner] = useState(null);
   const [currentAccount, setCurrentAccount] = useState(null);
   const [shipments, setShipments] = useState([]);
+  const [toast, setToast] = useState(null);
 
-  // helper: create contract instance (provider or signer)
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+  };
+
   const getContract = useCallback(
     (pOrS) => new ethers.Contract(CONTRACT_ADDRESS, TrackingABI.abi, pOrS),
     []
   );
 
-  // initialize read-only provider (Sepolia)
   useEffect(() => {
     try {
       const readProvider = new ethers.providers.JsonRpcProvider(READ_RPC);
@@ -38,16 +63,17 @@ export const TrackingProvider = ({ children }) => {
       setSigner(null);
       setProvider(null);
       localStorage.removeItem("connectedWallet");
+      showToast("Wallet disconnected", "warning");
       console.log("🔌 Wallet disconnected");
     } catch (err) {
       console.error("Error disconnecting wallet:", err);
+      showToast("Error disconnecting wallet", "error");
     }
   };
 
-  // connect wallet and ensure Sepolia network
   const connectWallet = async () => {
     if (!window.ethereum) {
-      alert("Please install MetaMask!");
+      showToast("Please install MetaMask!", "error");
       return;
     }
  
@@ -63,11 +89,10 @@ export const TrackingProvider = ({ children }) => {
             params: [{ chainId: sepoliaChainId }],
           });
         } catch (switchErr) {
-          alert("Please switch your MetaMask network to Sepolia Testnet.");
+          showToast("Please switch to Sepolia Testnet", "warning");
           return;
         }
       }
-    
 
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
@@ -78,18 +103,17 @@ export const TrackingProvider = ({ children }) => {
       const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
       setProvider(web3Provider);
       setSigner(web3Provider.getSigner());
+      showToast("Wallet connected successfully!", "success");
     } catch (err) {
       console.error("connectWallet error:", err);
-      alert("Failed to connect wallet.");
+      showToast("Failed to connect wallet", "error");
     }
   };
 
-  // detect account changes
   useEffect(() => {
     if (!window.ethereum) return;
     const handleAccountsChanged = (accounts) => {
       setCurrentAccount(accounts[0] || null);
-      // if disconnected, clear signer
       if (!accounts || accounts.length === 0) {
         setSigner(null);
       } else {
@@ -109,7 +133,6 @@ export const TrackingProvider = ({ children }) => {
     };
   }, []);
 
-  // fetch all shipments (global list) and format for UI
   const getAllShipments = useCallback(async () => {
     try {
       if (!provider) {
@@ -124,11 +147,9 @@ export const TrackingProvider = ({ children }) => {
         return;
       }
 
-      // data is an array of structs: [ sender, receiver, courier, scheduledPickupTime, actualPickupTime, deliveryTime, distance, price, status, isPaid ]
       const formatted = data
         .map((s, idx) => {
           if (!s) return null;
-          // some fields might be missing or zero; guard them
           const scheduled = s.scheduledPickupTime
             ? s.scheduledPickupTime.toNumber()
             : 0;
@@ -153,8 +174,8 @@ export const TrackingProvider = ({ children }) => {
             actualPickupTime: actual,
             deliveryTime: delivery,
             distance,
-            price, // string in ETH
-            priceWei, // raw wei string (if UI needs it)
+            price,
+            priceWei,
             status: s.status !== undefined ? Number(s.status) : 0,
             isPaid: !!s.isPaid,
           };
@@ -165,17 +186,15 @@ export const TrackingProvider = ({ children }) => {
       console.log("Fetched shipments:", formatted);
     } catch (err) {
       console.error("Error fetching shipments:", err);
-      setShipments([]); // avoid stale data
+      setShipments([]);
     }
   }, [provider, getContract]);
 
-  // call getAllShipments automatically when provider ready (read provider)
   useEffect(() => {
     if (!provider) return;
     getAllShipments();
   }, [provider, getAllShipments]);
 
-  // createShipment: sender provides ETH (price in ETH string)
   const createShipment = async (
     receiver,
     courier,
@@ -183,96 +202,99 @@ export const TrackingProvider = ({ children }) => {
     distance,
     price
   ) => {
-    if (!signer) return alert("Connect wallet first");
+    if (!signer) {
+      showToast("Connect wallet first", "warning");
+      return;
+    }
     if (!price || isNaN(price) || Number(price) <= 0) {
-      alert("Please enter valid price in ETH");
+      showToast("Please enter valid price in ETH", "warning");
       return;
     }
 
     try {
       const contract = getContract(signer);
-      const value = ethers.utils.parseEther(price.toString()); // ETH -> wei
+      const value = ethers.utils.parseEther(price.toString());
       const tx = await contract.createShipment(
         receiver,
         courier,
         pickupTime,
         distance,
         value,
-        {
-          value,
-        }
+        { value }
       );
       await tx.wait();
-      alert("Shipment created successfully!");
-      // refresh read list
+      showToast("Shipment created successfully!", "success");
       await getAllShipments();
     } catch (err) {
       console.error("Error creating shipment:", err);
-      alert("Transaction failed. See console for details.");
+      showToast("Transaction failed", "error");
     }
   };
 
-  // startShipment (courier)
   const startShipment = async (shipmentId) => {
-    if (!signer) return alert("Connect wallet first");
+    if (!signer) {
+      showToast("Connect wallet first", "warning");
+      return;
+    }
     try {
       const contract = getContract(signer);
       const tx = await contract.startShipment(shipmentId, { gasLimit: 300000 });
       await tx.wait();
-      alert("Shipment started!");
+      showToast("Shipment started!", "success");
       await getAllShipments();
     } catch (err) {
       console.error("Error starting shipment:", err);
-      alert("Failed to start shipment. Check console.");
+      showToast("Failed to start shipment", "error");
     }
   };
 
-  // markDelivered (courier)
   const markDelivered = async (shipmentId) => {
-    if (!signer) return alert("Connect wallet first");
+    if (!signer) {
+      showToast("Connect wallet first", "warning");
+      return;
+    }
     try {
       const contract = getContract(signer);
       const tx = await contract.markDelivered(shipmentId, { gasLimit: 300000 });
       await tx.wait();
-      alert("Marked delivered (waiting receiver confirmation).");
+      showToast("Marked delivered (waiting receiver confirmation)", "success");
       await getAllShipments();
     } catch (err) {
       console.error("Error marking delivered:", err);
-      alert("Failed to mark delivered. Check console.");
+      showToast("Failed to mark delivered", "error");
     }
   };
 
-  // confirmDelivery (receiver)
   const confirmDelivery = async (shipmentId) => {
-    if (!signer) return alert("Connect wallet first");
+    if (!signer) {
+      showToast("Connect wallet first", "warning");
+      return;
+    }
     try {
       const contract = getContract(signer);
       const tx = await contract.confirmDelivery(shipmentId, {
         gasLimit: 300000,
       });
       await tx.wait();
-      alert("Delivery confirmed. Courier paid.");
+      showToast("Delivery confirmed. Courier paid.", "success");
       await getAllShipments();
     } catch (err) {
       console.error("Error confirming delivery:", err);
-      alert("Failed to confirm delivery. Check console.");
+      showToast("Failed to confirm delivery", "error");
     }
   };
 
-  // getShipmentDetails (restricted by contract to sender; handle errors)
   const getShipmentDetails = async (shipmentId) => {
     try {
-      // Use signer if available (so msg.sender = your wallet)
       const activeProvider = signer || provider;
       if (!activeProvider) {
-        alert("No provider or signer available.");
+        showToast("No provider or signer available", "error");
         return null;
       }
 
       const contract = getContract(activeProvider);
       const s = await contract.getShipmentDetails(shipmentId);
 
-      // Format for readability
       return {
         sender: s[0],
         receiver: s[1],
@@ -291,7 +313,6 @@ export const TrackingProvider = ({ children }) => {
     }
   };
 
-  // getSenderShipmentCount (cheap for frontend; contract may iterate)
   const getSenderShipmentCount = async (address) => {
     try {
       if (!provider) return 0;
@@ -304,7 +325,6 @@ export const TrackingProvider = ({ children }) => {
     }
   };
 
-  // getShipmentsBySender (returns array of shipments created by address)
   const getShipmentsBySender = async (address) => {
     try {
       if (!provider) return [];
@@ -328,7 +348,6 @@ export const TrackingProvider = ({ children }) => {
           }
         })();
         return {
-          // note: this index is relative to the returned array, not global id
           sender: s.sender,
           receiver: s.receiver,
           courier: s.courier,
@@ -368,6 +387,28 @@ export const TrackingProvider = ({ children }) => {
       }}
     >
       {children}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      <style>{`
+        @keyframes slide-in {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+      `}</style>
     </TrackingContext.Provider>
   );
 };

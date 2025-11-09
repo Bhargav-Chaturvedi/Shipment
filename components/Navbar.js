@@ -74,103 +74,101 @@ export default function Navbar() {
         height: "70px",
       }}
     >
-      <style>
-        {`
-          * {
-            scroll-margin-top: 90px;
-          }
+      <style dangerouslySetInnerHTML={{__html: `
+        * {
+          scroll-margin-top: 90px;
+        }
 
-          body {
-            padding-top: 70px;
-          }
+        body {
+          padding-top: 70px;
+        }
 
-          @keyframes glow-pulse {
-            0%, 100% { 
-              text-shadow: 0 0 15px rgba(0, 242, 254, 0.6), 
-                           0 0 30px rgba(0, 242, 254, 0.3),
-                           0 0 45px rgba(0, 242, 254, 0.2);
-            }
-            50% { 
-              text-shadow: 0 0 25px rgba(0, 242, 254, 0.9), 
-                           0 0 50px rgba(0, 242, 254, 0.5),
-                           0 0 75px rgba(0, 242, 254, 0.3);
-            }
+        @keyframes glow-pulse {
+          0%, 100% { 
+            text-shadow: 0 0 15px rgba(0, 242, 254, 0.6), 
+                         0 0 30px rgba(0, 242, 254, 0.3),
+                         0 0 45px rgba(0, 242, 254, 0.2);
           }
+          50% { 
+            text-shadow: 0 0 25px rgba(0, 242, 254, 0.9), 
+                         0 0 50px rgba(0, 242, 254, 0.5),
+                         0 0 75px rgba(0, 242, 254, 0.3);
+          }
+        }
 
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-3px); }
-          }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-3px); }
+        }
 
-          @keyframes shimmer {
-            0% { background-position: -200% center; }
-            100% { background-position: 200% center; }
-          }
+        @keyframes shimmer {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
 
-          .nav-item {
-            position: relative;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-          }
+        .nav-item {
+          position: relative;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: hidden;
+        }
 
-          .nav-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, 
-              transparent, 
-              rgba(0, 242, 254, 0.3), 
-              transparent
-            );
-            transition: left 0.5s;
-          }
+        .nav-item::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, 
+            transparent, 
+            rgba(0, 242, 254, 0.3), 
+            transparent
+          );
+          transition: left 0.5s;
+        }
 
-          .nav-item:hover::before {
-            left: 100%;
-          }
+        .nav-item:hover::before {
+          left: 100%;
+        }
 
-          .nav-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.3) !important;
-          }
+        .nav-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0, 242, 254, 0.3) !important;
+        }
 
-          .nav-item-active {
-            background: linear-gradient(135deg, rgba(0, 242, 254, 0.2) 0%, rgba(79, 172, 254, 0.15) 100%) !important;
-            border-color: rgba(0, 242, 254, 0.6) !important;
-            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4), 
-                        0 0 30px rgba(0, 242, 254, 0.2) inset !important;
-          }
+        .nav-item-active {
+          background: linear-gradient(135deg, rgba(0, 242, 254, 0.2) 0%, rgba(79, 172, 254, 0.15) 100%) !important;
+          border-color: rgba(0, 242, 254, 0.6) !important;
+          box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4), 
+                      0 0 30px rgba(0, 242, 254, 0.2) inset !important;
+        }
 
-          .wallet-address {
-            background: linear-gradient(135deg, rgba(0, 255, 136, 0.15) 0%, rgba(0, 255, 136, 0.05) 100%);
-            position: relative;
-            overflow: hidden;
-          }
+        .wallet-address {
+          background: linear-gradient(135deg, rgba(0, 255, 136, 0.15) 0%, rgba(0, 255, 136, 0.05) 100%);
+          position: relative;
+          overflow: hidden;
+        }
 
-          .wallet-address::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(
-              45deg,
-              transparent 30%,
-              rgba(0, 255, 136, 0.1) 50%,
-              transparent 70%
-            );
-            animation: shimmer 3s infinite;
-          }
+        .wallet-address::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: linear-gradient(
+            45deg,
+            transparent 30%,
+            rgba(0, 255, 136, 0.1) 50%,
+            transparent 70%
+          );
+          animation: shimmer 3s infinite;
+        }
 
-          .logo-icon {
-            animation: float 3s ease-in-out infinite;
-          }
-        `}
-      </style>
+        .logo-icon {
+          animation: float 3s ease-in-out infinite;
+        }
+      `}} />
 
       {/* 🚚 Logo / Brand */}
       <div 
