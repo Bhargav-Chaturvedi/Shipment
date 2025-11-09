@@ -6,11 +6,8 @@ async function main() {
 
   await tracking.deployed();
 
-  console.log(`Tracking deployed to ${tracking.address}`);
+  console.log(`✅ Tracking deployed to: ${tracking.address}`);
 }
-
-//npx hardhat run scripts/deploy.js --network polygon_amoy
-//npx hardhat run scripts/deploy.js --network localhost
 
 main().catch((error) => {
   console.error(error);

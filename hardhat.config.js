@@ -1,20 +1,16 @@
 require("@nomicfoundation/hardhat-toolbox");
 
-const NEXT_PUBLIC_POLYGON_AMOY_RPC = "https://rpc-amoy.polygon.technology/";
-const NEXT_PUBLIC_PRIVATE_KEY = "1889c56b22178f88d9c215b8236aa8f90b672020e1e932267bdb9e0f0dfe541c";  
+const SEPOLIA_RPC_URL = "https://eth-sepolia.g.alchemy.com/v2/pPfNOZ5-BPehquKNAga5X"; 
+const PRIVATE_KEY = "1889c56b22178f88d9c215b8236aa8f90b672020e1e932267bdb9e0f0dfe541c";  
 
-/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.0",
-  defaultNetwork: "polygon_amoy",  
+  solidity: "0.8.20",
+  defaultNetwork: "sepolia",
   networks: {
-    hardhat: {
-      chainId: 31337,
-    },
-    polygon_amoy: {
-      url: NEXT_PUBLIC_POLYGON_AMOY_RPC,
-      accounts: [`0x${NEXT_PUBLIC_PRIVATE_KEY}`],
-      chainId: 80002,
+    sepolia: {
+      url: SEPOLIA_RPC_URL,
+      accounts: [`0x${PRIVATE_KEY}`],
+      chainId: 11155111,
     },
   },
 };

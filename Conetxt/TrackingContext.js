@@ -1,335 +1,351 @@
-import React, { useState, useEffect } from "react";
-import Web3Modal from "web3modal";
+// src/Context/TrackingContext.js
+import React, { createContext, useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
+import TrackingABI from "./Tracking.json";
 
-//INTERNAL IMPORT
-import tracking from "../Conetxt/Tracking.json";
-//HARDHAT ADDRESS
-const ContractAddress = "0xabFad265f5aBd587696bC269317959f2Ae7bFf1F";
-//POLYGON ADDRESS
-// const ContractAddress = "0xbeEed8435ee819851f443Ae302E9A1c138e3C24c";
-const ContractABI = tracking.abi;
+export const TrackingContext = createContext();
 
-//---FETCHING SMART CONTRACT
-const fetchContract = (signerOrProvider) =>
-  new ethers.Contract(ContractAddress, ContractABI, signerOrProvider);
+const CONTRACT_ADDRESS = "0xd349ea4Cfc51a9F6f6accC49253eD445e6D80987";
 
-//NETWORK----
-
-//NETWORK
-const networks = {
-  polygon_amoy: {
-    chainId: `0x${Number(80002).toString(16)}`,
-    chainName: "Polygon Amoy",
-    nativeCurrency: {
-      name: "MATIC",
-      symbol: "MATIC",
-      decimals: 18,
-    },
-    rpcUrls: ["https://rpc-amoy.polygon.technology/"],
-    blockExplorerUrls: ["https://www.oklink.com/amoy"],
-  },
-  // polygon_mumbai: {
-  //   chainId: `0x${Number(80001).toString(16)}`,
-  //   chainName: "Polygon Mumbai",
-  //   nativeCurrency: {
-  //     name: "MATIC",
-  //     symbol: "MATIC",
-  //     decimals: 18,
-  //   },
-  //   rpcUrls: ["https://rpc.ankr.com/polygon_mumbai"],
-  //   blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
-  // },
-  // polygon: {
-  //   chainId: `0x${Number(137).toString(16)}`,
-  //   chainName: "Polygon Mainnet",
-  //   nativeCurrency: {
-  //     name: "MATIC",
-  //     symbol: "MATIC",
-  //     decimals: 18,
-  //   },
-  //   rpcUrls: ["https://rpc.ankr.com/polygon"],
-  //   blockExplorerUrls: ["https://polygonscan.com/"],
-  // },
-  // bsc: {
-  //   chainId: `0x${Number(56).toString(16)}`,
-  //   chainName: "Binance Smart Chain Mainnet",
-  //   nativeCurrency: {
-  //     name: "Binance Chain Native Token",
-  //     symbol: "BNB",
-  //     decimals: 18,
-  //   },
-  //   rpcUrls: ["https://rpc.ankr.com/bsc"],
-  //   blockExplorerUrls: ["https://bscscan.com"],
-  // },
-  // base_mainnet: {
-  //   chainId: `0x${Number(8453).toString(16)}`,
-  //   chainName: "Base Mainnet",
-  //   nativeCurrency: {
-  //     name: "ETH",
-  //     symbol: "ETH",
-  //     decimals: 18,
-  //   },
-  //   rpcUrls: ["https://mainnet.base.org/"],
-  //   blockExplorerUrls: ["https://bscscan.com"],
-  // },
-  // base_sepolia: {
-  //   chainId: `0x${Number(84532).toString(16)}`,
-  //   chainName: "Base Sepolia",
-  //   nativeCurrency: {
-  //     name: "ETH",
-  //     symbol: "ETH",
-  //     decimals: 18,
-  //   },
-  //   rpcUrls: ["https://sepolia.base.org"],
-  //   blockExplorerUrls: ["https://bscscan.com"],
-  // },
-//  localhost: {
-//   chainId: `0x${Number(31337).toString(16)}`,
-//   chainName: "Hardhat Localhost",
-//   nativeCurrency: {
-//     name: "ETH",
-//     symbol: "ETH",
-//     decimals: 18,
-//   },
-//   rpcUrls: ["http://127.0.0.1:8545/"],
-//   blockExplorerUrls: [""],  // Hardhat doesn't have a block explorer
-// },
-
-
-};
-
-const changeNetwork = async ({ networkName }) => {
-  try {
-    if (!window.ethereum) throw new Error("No crypto wallet found");
-    
-    const networkParams = networks[networkName];
-    await window.ethereum.request({
-      method: "wallet_addEthereumChain",
-      params: [{ ...networkParams }],
-    });
-  } catch (err) {
-    if (err.code === 4902) {
-      // Network not added, so add it
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [{ ...networks[networkName] }],
-      });
-    } else {
-      console.log(err.message);
-    }
-  }
-};
-
-
-
-export const handleNetworkSwitch = async () => {
-  const networkName = "polygon_amoy";  
-  await changeNetwork({ networkName });
-};
-
-//END  OF NETWORK-------
-
-export const TrackingContext = React.createContext();
+// Read RPC (Sepolia). Replace with your own key if needed.
+const READ_RPC = "https://eth-sepolia.g.alchemy.com/v2/pPfNOZ5-BPehquKNAga5X";
 
 export const TrackingProvider = ({ children }) => {
-  //STATE VARIABLE
-  const DappName = "Product Tracking Dapp";
-  const [currentUser, setCurrentUser] = useState("");
+  const [provider, setProvider] = useState(null); // read provider (JsonRpcProvider or Web3Provider)
+  const [signer, setSigner] = useState(null); // signer for writes
+  const [currentAccount, setCurrentAccount] = useState(null);
+  const [shipments, setShipments] = useState([]);
 
-  const createShipment = async (items) => {
-    console.log(items);
-    const { receiver, pickupTime, distance, price } = items;
+  // helper: create contract instance (provider or signer)
+  const getContract = useCallback(
+    (pOrS) => new ethers.Contract(CONTRACT_ADDRESS, TrackingABI.abi, pOrS),
+    []
+  );
 
+  // initialize read-only provider (Sepolia)
+  useEffect(() => {
     try {
-      const web3Modal = new Web3Modal();
-      const connection = await web3Modal.connect();
-      const provider = new ethers.providers.Web3Provider(connection);
-      const signer = provider.getSigner();
-      const contract = fetchContract(signer);
-      const createItem = await contract.createShipment(
-        receiver,
-        new Date(pickupTime).getTime(),
-        distance,
-        ethers.utils.parseUnits(price, 18),
-        {
-          value: ethers.utils.parseUnits(price, 18),
-        }
-      );
-      await createItem.wait();
-      console.log(createItem);
-      location.reload();
-    } catch (error) {
-      console.log("Some want wrong", error);
+      const readProvider = new ethers.providers.JsonRpcProvider(READ_RPC);
+      setProvider(readProvider);
+    } catch (err) {
+      console.error("Failed to create read provider:", err);
+    }
+  }, []);
+  
+  const disconnectWallet = () => {
+    try {
+      setCurrentAccount(null);
+      setSigner(null);
+      setProvider(null);
+      localStorage.removeItem("connectedWallet");
+      console.log("🔌 Wallet disconnected");
+    } catch (err) {
+      console.error("Error disconnecting wallet:", err);
     }
   };
 
-  const getAllShipment = async () => {
-    try {
-      const address = await checkIfWalletConnected();
-      if (address) {
-        const web3Modal = new Web3Modal();
-        const connection = await web3Modal.connect();
-        // const provider = new ethers.providers.Web3Provider(connection);
-        const provider = new ethers.providers.JsonRpcProvider("https://polygon-amoy.g.alchemy.com/v2/InluP3r0JxfdDuGpDXDAvlr1lHYYqWmy");
-        const contract = fetchContract(provider);
-
-        const shipments = await contract.getAllTransactions();
-        const allShipments = shipments.map((shipment) => ({
-          sender: shipment.sender,
-          receiver: shipment.receiver,
-          price: ethers.utils.formatEther(shipment.price.toString()),
-          pickupTime: shipment.pickupTime.toNumber(),
-          deliveryTime: shipment.deliveryTime.toNumber(),
-          distance: shipment.distance.toNumber(),
-          isPaid: shipment.isPaid,
-          status: shipment.status,
-        }));
-
-        return allShipments;
-      }
-    } catch (error) {
-      console.log("error want, getting shipment");
-    }
-  };
-
-  const getShipmentsCount = async () => {
-    try {
-      const address = await checkIfWalletConnected();
-      if (address) {
-        const web3Modal = new Web3Modal();
-        const connection = await web3Modal.connect();
-        // const provider = new ethers.providers.Web3Provider(connection);
-        const provider = new ethers.providers.JsonRpcProvider("https://polygon-amoy.g.alchemy.com/v2/InluP3r0JxfdDuGpDXDAvlr1lHYYqWmy");
-        const contract = fetchContract(provider);
-        const shipmentsCount = await contract.getShipmentsCount(accounts[0]);
-        return shipmentsCount.toNumber();
-      }
-    } catch (error) {
-      console.log("error want, getting shipment");
-    }
-  };
-
-  const completeShipment = async (completeShip) => {
-    const { recevier, index } = completeShip;
-    try {
-      const address = await checkIfWalletConnected();
-      if (address) {
-        const web3Modal = new Web3Modal();
-        const connection = await web3Modal.connect();
-        const provider = new ethers.providers.Web3Provider(connection);
-        const signer = provider.getSigner();
-        const contract = fetchContract(signer);
-
-        const transaction = await contract.completeShipment(
-          address,
-          recevier,
-          index,
-          {
-            gasLimit: 300000,
-          }
-        );
-
-        await transaction.wait();
-        console.log(transaction);
-        location.reload();
-      }
-    } catch (error) {
-      console.log("wrong completeShipment", error);
-    }
-  };
-
-  const getShipment = async (index) => {
-    try {
-      const address = await checkIfWalletConnected();
-
-      if (address) {
-        const web3Modal = new Web3Modal();
-        const connection = await web3Modal.connect();
-        // const provider = new ethers.providers.Web3Provider(connection);
-        const provider = new ethers.providers.JsonRpcProvider("https://polygon-amoy.g.alchemy.com/v2/InluP3r0JxfdDuGpDXDAvlr1lHYYqWmy");
-        const contract = fetchContract(provider);
-        const shipment = await contract.getShipment(address, index * 1);
-
-        const SingleShiplent = {
-          sender: shipment[0],
-          receiver: shipment[1],
-          pickupTime: shipment[2].toNumber(),
-          deliveryTime: shipment[3].toNumber(),
-          distance: shipment[4].toNumber(),
-          price: ethers.utils.formatEther(shipment[5].toString()),
-          status: shipment[6],
-          isPaid: shipment[7],
-        };
-
-        return SingleShiplent;
-      }
-    } catch (error) {
-      console.log("Sorry no chipment");
-    }
-  };
-
-  const startShipment = async (getProduct) => {
-    const { reveiver, index } = getProduct;
-
-    try {
-      const address = await checkIfWalletConnected();
-
-      if (address) {
-        const web3Modal = new Web3Modal();
-        const connection = await web3Modal.connect();
-        const provider = new ethers.providers.Web3Provider(connection);
-        const signer = provider.getSigner();
-        const contract = fetchContract(signer);
-        const shipment = await contract.startShipment(
-          address,
-          reveiver,
-          index * 1,
-          {
-            gasLimit: 300000,
-          }
-        );
-
-        shipment.wait();
-        console.log(shipment);
-        location.reload();
-      }
-    } catch (error) {
-      console.log("Sorry no chipment", error);
-    }
-  };
-  //---CHECK WALLET CONNECTED
-  const checkIfWalletConnected = async () => {
-    try {
-      if (!window.ethereum) return "Install MetaMask";
-      const network = await handleNetworkSwitch();
-      const accounts = await window.ethereum.request({
-        method: "eth_accounts",
-      });
-
-      if (accounts.length) {
-        setCurrentUser(accounts[0]);
-        return accounts[0];
-      } else {
-        return "No account";
-      }
-    } catch (error) {
-      return "not connected";
-    }
-  };
-
-  //---CONNET WALLET FUNCTION
+  // connect wallet and ensure Sepolia network
   const connectWallet = async () => {
+    if (!window.ethereum) {
+      alert("Please install MetaMask!");
+      return;
+    }
+ 
     try {
-      if (!window.ethereum) return "Install MetaMask";
-      const network = await handleNetworkSwitch();
+      const currentChainId = await window.ethereum.request({
+        method: "eth_chainId",
+      });
+      const sepoliaChainId = "0xaa36a7";
+      if (currentChainId !== sepoliaChainId) {
+        try {
+          await window.ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: sepoliaChainId }],
+          });
+        } catch (switchErr) {
+          alert("Please switch your MetaMask network to Sepolia Testnet.");
+          return;
+        }
+      }
+    
+
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
+      const account = accounts[0];
+      setCurrentAccount(account);
 
-      setCurrentUser(accounts[0]);
-    } catch (error) {
-      return "Something want wrong";
+      const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+      setProvider(web3Provider);
+      setSigner(web3Provider.getSigner());
+    } catch (err) {
+      console.error("connectWallet error:", err);
+      alert("Failed to connect wallet.");
+    }
+  };
+
+  // detect account changes
+  useEffect(() => {
+    if (!window.ethereum) return;
+    const handleAccountsChanged = (accounts) => {
+      setCurrentAccount(accounts[0] || null);
+      // if disconnected, clear signer
+      if (!accounts || accounts.length === 0) {
+        setSigner(null);
+      } else {
+        try {
+          const web3Provider = new ethers.providers.Web3Provider(
+            window.ethereum
+          );
+          setSigner(web3Provider.getSigner());
+        } catch (e) {
+          console.warn("Could not set signer after account change", e);
+        }
+      }
+    };
+    window.ethereum.on("accountsChanged", handleAccountsChanged);
+    return () => {
+      window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+    };
+  }, []);
+
+  // fetch all shipments (global list) and format for UI
+  const getAllShipments = useCallback(async () => {
+    try {
+      if (!provider) {
+        console.warn("Provider not ready yet (getAllShipments).");
+        return;
+      }
+      const contract = getContract(provider);
+      const data = await contract.getAllShipments();
+      if (!data || data.length === 0) {
+        setShipments([]);
+        console.log("No shipments returned from contract.");
+        return;
+      }
+
+      // data is an array of structs: [ sender, receiver, courier, scheduledPickupTime, actualPickupTime, deliveryTime, distance, price, status, isPaid ]
+      const formatted = data
+        .map((s, idx) => {
+          if (!s) return null;
+          // some fields might be missing or zero; guard them
+          const scheduled = s.scheduledPickupTime
+            ? s.scheduledPickupTime.toNumber()
+            : 0;
+          const actual = s.actualPickupTime ? s.actualPickupTime.toNumber() : 0;
+          const delivery = s.deliveryTime ? s.deliveryTime.toNumber() : 0;
+          const distance = s.distance ? s.distance.toNumber() : 0;
+          const priceWei = s.price ? s.price.toString() : "0";
+          const price = (() => {
+            try {
+              return ethers.utils.formatEther(priceWei);
+            } catch {
+              return "0";
+            }
+          })();
+
+          return {
+            shipmentId: idx,
+            sender: s.sender,
+            receiver: s.receiver,
+            courier: s.courier,
+            scheduledPickupTime: scheduled,
+            actualPickupTime: actual,
+            deliveryTime: delivery,
+            distance,
+            price, // string in ETH
+            priceWei, // raw wei string (if UI needs it)
+            status: s.status !== undefined ? Number(s.status) : 0,
+            isPaid: !!s.isPaid,
+          };
+        })
+        .filter(Boolean);
+
+      setShipments(formatted);
+      console.log("Fetched shipments:", formatted);
+    } catch (err) {
+      console.error("Error fetching shipments:", err);
+      setShipments([]); // avoid stale data
+    }
+  }, [provider, getContract]);
+
+  // call getAllShipments automatically when provider ready (read provider)
+  useEffect(() => {
+    if (!provider) return;
+    getAllShipments();
+  }, [provider, getAllShipments]);
+
+  // createShipment: sender provides ETH (price in ETH string)
+  const createShipment = async (
+    receiver,
+    courier,
+    pickupTime,
+    distance,
+    price
+  ) => {
+    if (!signer) return alert("Connect wallet first");
+    if (!price || isNaN(price) || Number(price) <= 0) {
+      alert("Please enter valid price in ETH");
+      return;
+    }
+
+    try {
+      const contract = getContract(signer);
+      const value = ethers.utils.parseEther(price.toString()); // ETH -> wei
+      const tx = await contract.createShipment(
+        receiver,
+        courier,
+        pickupTime,
+        distance,
+        value,
+        {
+          value,
+        }
+      );
+      await tx.wait();
+      alert("Shipment created successfully!");
+      // refresh read list
+      await getAllShipments();
+    } catch (err) {
+      console.error("Error creating shipment:", err);
+      alert("Transaction failed. See console for details.");
+    }
+  };
+
+  // startShipment (courier)
+  const startShipment = async (shipmentId) => {
+    if (!signer) return alert("Connect wallet first");
+    try {
+      const contract = getContract(signer);
+      const tx = await contract.startShipment(shipmentId, { gasLimit: 300000 });
+      await tx.wait();
+      alert("Shipment started!");
+      await getAllShipments();
+    } catch (err) {
+      console.error("Error starting shipment:", err);
+      alert("Failed to start shipment. Check console.");
+    }
+  };
+
+  // markDelivered (courier)
+  const markDelivered = async (shipmentId) => {
+    if (!signer) return alert("Connect wallet first");
+    try {
+      const contract = getContract(signer);
+      const tx = await contract.markDelivered(shipmentId, { gasLimit: 300000 });
+      await tx.wait();
+      alert("Marked delivered (waiting receiver confirmation).");
+      await getAllShipments();
+    } catch (err) {
+      console.error("Error marking delivered:", err);
+      alert("Failed to mark delivered. Check console.");
+    }
+  };
+
+  // confirmDelivery (receiver)
+  const confirmDelivery = async (shipmentId) => {
+    if (!signer) return alert("Connect wallet first");
+    try {
+      const contract = getContract(signer);
+      const tx = await contract.confirmDelivery(shipmentId, {
+        gasLimit: 300000,
+      });
+      await tx.wait();
+      alert("Delivery confirmed. Courier paid.");
+      await getAllShipments();
+    } catch (err) {
+      console.error("Error confirming delivery:", err);
+      alert("Failed to confirm delivery. Check console.");
+    }
+  };
+
+  // getShipmentDetails (restricted by contract to sender; handle errors)
+  const getShipmentDetails = async (shipmentId) => {
+    try {
+      // Use signer if available (so msg.sender = your wallet)
+      const activeProvider = signer || provider;
+      if (!activeProvider) {
+        alert("No provider or signer available.");
+        return null;
+      }
+
+      const contract = getContract(activeProvider);
+      const s = await contract.getShipmentDetails(shipmentId);
+
+      // Format for readability
+      return {
+        sender: s[0],
+        receiver: s[1],
+        courier: s[2],
+        scheduledPickupTime: s[3].toNumber(),
+        actualPickupTime: s[4].toNumber(),
+        deliveryTime: s[5].toNumber(),
+        distance: s[6].toNumber(),
+        price: ethers.utils.formatEther(s[7]),
+        status: Number(s[8]),
+        isPaid: s[9],
+      };
+    } catch (err) {
+      console.error("getShipmentDetails error:", err);
+      throw err;
+    }
+  };
+
+  // getSenderShipmentCount (cheap for frontend; contract may iterate)
+  const getSenderShipmentCount = async (address) => {
+    try {
+      if (!provider) return 0;
+      const contract = getContract(provider);
+      const cnt = await contract.getSenderShipmentCount(address);
+      return Number(cnt);
+    } catch (err) {
+      console.error("getSenderShipmentCount error:", err);
+      return 0;
+    }
+  };
+
+  // getShipmentsBySender (returns array of shipments created by address)
+  const getShipmentsBySender = async (address) => {
+    try {
+      if (!provider) return [];
+      const contract = getContract(provider);
+      const data = await contract.getShipmentsBySender(address);
+      if (!data || data.length === 0) return [];
+
+      const formatted = data.map((s, idx) => {
+        const scheduled = s.scheduledPickupTime
+          ? s.scheduledPickupTime.toNumber()
+          : 0;
+        const actual = s.actualPickupTime ? s.actualPickupTime.toNumber() : 0;
+        const delivery = s.deliveryTime ? s.deliveryTime.toNumber() : 0;
+        const distance = s.distance ? s.distance.toNumber() : 0;
+        const priceWei = s.price ? s.price.toString() : "0";
+        const price = (() => {
+          try {
+            return ethers.utils.formatEther(priceWei);
+          } catch {
+            return "0";
+          }
+        })();
+        return {
+          // note: this index is relative to the returned array, not global id
+          sender: s.sender,
+          receiver: s.receiver,
+          courier: s.courier,
+          scheduledPickupTime: scheduled,
+          actualPickupTime: actual,
+          deliveryTime: delivery,
+          distance,
+          price,
+          priceWei,
+          status: s.status !== undefined ? Number(s.status) : 0,
+          isPaid: !!s.isPaid,
+        };
+      });
+      return formatted;
+    } catch (err) {
+      console.error("getShipmentsBySender error:", err);
+      return [];
     }
   };
 
@@ -337,14 +353,18 @@ export const TrackingProvider = ({ children }) => {
     <TrackingContext.Provider
       value={{
         connectWallet,
+        disconnectWallet,
+        currentAccount,
         createShipment,
-        getAllShipment,
-        completeShipment,
-        getShipment,
         startShipment,
-        getShipmentsCount,
-        DappName,
-        currentUser,
+        markDelivered,
+        confirmDelivery,
+        getAllShipments,
+        getShipmentDetails,
+        getSenderShipmentCount,
+        getShipmentsBySender,
+        shipments,
+        getContract,
       }}
     >
       {children}
